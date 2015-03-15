@@ -1,0 +1,73 @@
+Reproducible Research Project 1
+Callie Flynn
+
+March 15, 2015
+
+(This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see http://rmarkdown.rstudio.com.)
+
+This program requires the following packages:lattice, ggplot2, and lubridate
+
+library(lattice)
+library(ggplot2)
+library(lubridate)
+Load the data that is already tidy
+
+userData <- read.csv("activity.csv", header=TRUE, sep=",")
+What is mean total number of steps taken per day?
+Make a histogram of the total number of steps taken each day Calculate the total number of steps taken per day Also, add a column for the day of the week
+
+userData$weekday <- weekdays(as.Date(userData$date))
+userData$weekday <- as.factor(userData$weekday)
+stepsByDay <- aggregate(userData$steps, list(userData$date), FUN = sum)
+colnames(stepsByDay) <- c("date", "steps")
+barplot(stepsByDay$steps, names.arg = stepsByDay$Date, xlab = "date", ylab = "steps")
+
+
+Calculate and report the mean and median of the total number of steps taken per day
+meanStepsPerDay <- mean(stepsByDay$steps, na.rm=TRUE)
+medianStepsPerDay <- median(stepsByDay$steps, na.rm=TRUE)
+What is the average daily activity pattern?
+Make a time series plot (i.e. type = “l”) of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis) Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+intervalSteps <- aggregate(steps ~ interval, data = userData, FUN = mean)
+plot(intervalSteps, type="l")
+
+
+intervalSteps$interval[which.max(intervalSteps$steps)]
+## [1] 835
+Imputing missing values
+Calculate and report the total number of missing values in the dataset Devise a strategy for filling in all of the missing values in the dataset. The strategy is not sophisticated. I use the interval’s mean. This is because most NA’s occur on the same day.
+
+sum(is.na(userData$steps))
+## [1] 2304
+newSet <- merge(x=userData, y=intervalSteps, by="interval")
+blankRows <- is.na(newSet$steps.x)
+newSet$steps.x[blankRows] <- newSet$steps.y[blankRows]
+Make a histogram of the total number of steps taken each day.
+Calculate and report the mean and median total number of steps taken per day.
+
+stepsDay <- aggregate(steps.x ~ date, data = newSet, FUN = sum)
+barplot(stepsDay$steps, names.arg = stepsDay$Date, xlab = "date", ylab = "steps")
+
+
+mean(stepsDay$steps, na.rm=TRUE)
+## [1] 10766.19
+median(stepsDay$steps, na.rm=TRUE)
+## [1] 10766.19
+These values do not differ much from our first estimates–the impact is minimal.
+
+Are there differences in activity patterns between weekdays and weekends?
+Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+categorizeDay <- function(day) {
+  if (day %in% c("Saturday", "Sunday")) {
+    "weekend"
+  }else{
+    "weekday"
+  }}
+newSet$daytype <- as.factor(sapply(newSet$weekday, categorizeDay))
+Make a panel plot containing a time series plot (i.e. type = “l”) ofthe 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+xyplot(steps.x ~ interval | daytype, data=newSet, type="l", xlab="Interval", ylab="Steps", main="Weekend vs. Weekday Steps", layout=c(1,2))
+
+
+It appears that the user is more active on weekday mornings. On weekends, the user is slightly more active in the afternoons.
